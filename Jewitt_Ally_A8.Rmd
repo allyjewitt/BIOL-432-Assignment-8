@@ -1,0 +1,116 @@
+---
+title: "Jewitt_Ally_A8"
+author: "Ally Jewitt"
+date: "2023-03-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Part I 
+
+## What effect (if any) does garlic mustard have on the plant community?
+
+### Load libraries
+```{r}
+library(ggplot2)
+library(ape)
+library(ggtree)
+library(vegan)
+library(dplyr)
+library(tidyverse)
+library(data.table)
+```
+
+### Import OTU table
+```{r}
+OTU_table<-data.table::fread("OTU.csv", header=T,data.table = F)
+tibble::column_to_rownames(OTU_table, "Quadrate") -> OTU_table
+```
+
+### Bray-Curtis dissimilarity
+```{r}
+OTU_dist<-vegdist(OTU_table,method="bray",binary=F)
+```
+
+```{r}
+OTUtree<-nj(OTU_dist)
+```
+
+### Cluster by similarity
+```{r}
+ggtree(OTUtree,layout="rectangular") 
+```
+
+
+
+Figure 1. Neighbor-joining tree that clusters samples based on similarity of plant communities 
+
+```{r}
+Samples <- read.csv("Sample.csv", header=T)
+```
+
+### Colour code and annotate tree
+```{r}
+ggtree(OTUtree,layout="rectangular") %<+% Samples +
+  geom_tiplab(aes(colour=Location)) + theme(legend.position = "right") + scale_colour_discrete(name = "Location", labels = c("Inside garlic mustard patch", "Outside garlic mustard patch"))
+```
+
+
+
+Figure 2. Neighbour-joining tree that clusters samples based on similarity of plant communities. The tip labels indicate the quadrate that the measurements were taken from. The colour code is based on location. Location is whether quadrate measurements are taken inside (red) or outside (blue) of garlic mustard patches. 
+
+Based on Figure 2, there is no clear differentiation based on location of the quadrate. 
+
+
+### NMDS
+```{r}
+set.seed(123)
+NMDSdat<-metaMDS(OTU_dist,k=2)
+```
+
+```{r}
+PDat<-data.frame(NMDS1=NMDSdat$points[,1],
+                 NMDS2=NMDSdat$points[,2],
+                 Quadrate=row.names(OTU_table))
+```
+
+```{r}
+PDat<-merge(PDat,Samples,by="Quadrate",all.x=T,all.y=F)
+```
+
+```{r}
+qplot(x=NMDS1, y=NMDS2, colour=Location, alpha=I(0.6),data=PDat) + theme_bw() + scale_colour_discrete(name = "Location", labels = c("Inside garlic mustard patch", "Outside garlic mustard patch"))
+```
+
+
+
+Figure 3. NMDS bivariate plot indicating how the plant communities are clustered based on their location. Location is whether quadrate measurements are taken inside (red) or outside (blue) of garlic mustard patches. 
+
+
+# Part II
+
+## What has a stronger effect on plant communities: the presence/absence of garlic mustard (in/out) or sampling population?
+
+### Cluster by similarity 
+```{r}
+ggtree(OTUtree,layout="rectangular") %<+% Samples +
+  geom_tiplab(aes(colour=as.factor(Population))) + theme(legend.position = "right") + scale_colour_discrete(name = "Population", labels = c("Population 1", "Population 3", "Population 7","Population 13","Population 14"))
+```
+
+
+
+Figure 4. Neighbour-joining tree that clusters samples based on similarity of plant communities. The tip labels indicate the quadrate that the measurements were taken from. The colour code is based on sample population. Population is a code for a specific sampling location at QUBS, determined by presence of garlic mustard nearby. There are 5 different populations in this data set. 
+
+### NMDS
+```{r}
+qplot(x=NMDS1, y=NMDS2, colour=as.factor(Population), alpha=I(0.6),data=PDat) + theme_bw() + scale_colour_discrete(name = "Population", labels = c("Population 1", "Population 3", "Population 7","Population 13","Population 14"))
+```
+
+
+
+Figure 5. NMDS bivariate plot indicating how the plant communities are clustered based on their population. Population is a code for a specific sampling location at QUBS, determined by presence of garlic mustard nearby. There are 5 different populations in this data set.
+
+When comparing Figure 3 and Figure 5, there is better clustering among the populations in Figure 5, than the locations in Figure 3. This suggests that sampling population has a stronger effect on plant communities than the location. 
